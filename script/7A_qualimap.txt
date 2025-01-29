@@ -1,0 +1,41 @@
+#!/bin/bash
+#SBATCH --account=b1042
+#SBATCH --partition=genomics
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=6
+#SBATCH --time=08:00:00
+#SBATCH --mem=100G
+#SBATCH --job-name=qualimap
+#SBATCH --output=/projects/p31832/RNAseq/Commands/%j.out
+#SBATCH --error=/projects/p31832/RNAseq/Commands/%j.err
+
+ulimit -c unlimited
+module load qualimap/2.2.1
+module load parallel/20160922
+
+export JAVA_TOOL_OPTIONS="-Xmx16g"
+
+# Get input from command-line arguments
+ALIGNMENT_DIR=$1
+annotation=$2
+QUALIMAP_OUTPUT_DIR=$3
+keyword=$4
+
+# Generate a list of sample names
+samples=($(find ${ALIGNMENT_DIR} -type f -iname "*${keyword}*Aligned.sortedByCoord.out.bam" -printf "%f\n" | sed "s/_Aligned.sortedByCoord.out.bam//"))
+
+commands=()
+for sample in "${samples[@]}"; do
+  BAM_FILE="${ALIGNMENT_DIR}/${sample}_Aligned.sortedByCoord.out.bam"
+  OUTPUT_DIR="${QUALIMAP_OUTPUT_DIR}/${sample}_qualimap"
+
+  commands+=("qualimap rnaseq -pe -bam ${BAM_FILE} -gtf ${annotation} -outdir ${OUTPUT_DIR} -a proportional -p strand-specific-reverse --java-mem-size=16G") 
+done
+
+printf "%s\n" "${commands[@]}" | parallel -j 6
+
+##sbatch 7A_qualimap.sh /path/to/alignment_dir /path/to/gtf_annotation /path/to/qualimap_output_dir keyword
+
+##sbatch 7A_qualimap.sh /projects/p31832/RNAseq/MYCi975/P493_results/6_map_star /projects/p31832/RNAseq/Genome_index/Human/Homo_sapiens.GRCh38.109.gtf /projects/p31832/RNAseq/MYCi975/P493_results/7_qualimap ""
+
+##

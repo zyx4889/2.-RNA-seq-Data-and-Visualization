@@ -1,0 +1,39 @@
+#!/bin/bash
+
+echo "Merging paired-end reads for each sample..."
+
+# Prompt user for the working directory
+read -p "Enter the working directory: " WORK_DIR
+
+# Prompt user for the output directory for merged files
+read -p "Enter the output directory for merged files: " MERGE_DIR
+
+# Create the output directory if it doesn't exist
+mkdir -p ${MERGE_DIR}
+
+# Prompt user for the number of samples
+read -p "Enter the number of samples: " NUM_SAMPLES
+
+declare -A SAMPLES
+
+# Prompt user for sample names and their associated run accession IDs
+for i in $(seq 1 $NUM_SAMPLES); do
+    read -p "Enter sample name for sample $i: " SAMPLE_NAME
+    read -p "Enter run accession IDs or name without R1/F or R2/R, for sample $i (separated by space): " ACCESSION_IDS
+    SAMPLES+=( ["${SAMPLE_NAME}"]="${ACCESSION_IDS}" )
+done
+
+# Merge paired-end reads for each sample
+for SAMPLE in "${!SAMPLES[@]}"; do
+    PAIRED_READS=(${SAMPLES[$SAMPLE]})
+    cat ${WORK_DIR}/${PAIRED_READS[0]}_R1.fastq.gz ${WORK_DIR}/${PAIRED_READS[1]}_R1.fastq.gz > ${MERGE_DIR}/${SAMPLE}_1.fastq.gz
+    cat ${WORK_DIR}/${PAIRED_READS[0]}_R2.fastq.gz ${WORK_DIR}/${PAIRED_READS[1]}_R2.fastq.gz > ${MERGE_DIR}/${SAMPLE}_2.fastq.gz
+done
+
+echo "All runs processed and merged successfully."
+
+##Use case
+
+cd /projects/b1042/AbdulkadirLab/Will/macrophage_RNAseq/Commands
+./1.5A_merge.sh
+

@@ -1,0 +1,59 @@
+#!/bin/bash
+#SBATCH --account=b1042
+#SBATCH --partition=genomics
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=12
+#SBATCH --time=08:00:00
+#SBATCH --mem=220G
+#SBATCH --job-name=genomics
+#SBATCH --output=%j.out
+#SBATCH --error=%j.err
+
+module load parallel/20160922
+module load STAR/2.7.9a
+module load samtools/1.6
+
+# Get command-line arguments
+keyword=$1
+TRIMMED_DIR=$2
+GENOME_DIR=$3
+OUTPUT_DIR=$4
+
+# Find samples in the trimmed directory based on the keyword
+samples=($(find ${TRIMMED_DIR} -type f -iname "*${keyword}*.fastq.gz" -printf "%f\n" | sed "s/.fastq.gz//"))
+
+# Run STAR alignment
+commands1=()
+for sample in "${samples[@]}"; do
+  READS="${TRIMMED_DIR}/${sample}.fastq.gz"
+
+  commands1+=("STAR --runThreadN 2 \
+       --genomeDir $GENOME_DIR \
+       --readFilesIn $READS \
+       --readFilesCommand zcat \
+       --outFileNamePrefix ${OUTPUT_DIR}/${sample}_ \
+       --outSAMtype BAM SortedByCoordinate \
+       --quantMode GeneCounts \
+       --outSAMunmapped Within \
+       --outSAMattributes Standard\
+       --outFilterMismatchNmax 3\
+       --outFilterMultimapNmax 1")
+
+done
+printf "%s\n" "${commands1[@]}" | parallel -j 6
+
+# Wait for all STAR alignment jobs to finish
+wait
+
+# Run samtools sorting
+commands2=()
+for sample in "${samples[@]}"; do
+  # Sort BAM file by read name
+  SORTED_BAM="${OUTPUT_DIR}/${sample}_Aligned.sortedByName.out.bam"
+  commands2+=("samtools sort -n -o ${SORTED_BAM} ${OUTPUT_DIR}/${sample}_Aligned.sortedByCoord.out.bam")
+done
+printf "%s\n" "${commands2[@]}" | parallel -j 6
+
+## sbatch 6B_align_star_SE.sh <keyword> <trimmed_dir> <genome_dir> <output_dir>
+## sbatch 6B_align_star_SE.sh "" /projects/p31832/RNAseq/MYCi975/MYCCAP_results/3_trimmed /projects/p31832/RNAseq/Genome_index/Mouse /projects/p31832/RNAseq/MYCi975/MYCCAP_results/6_map_star
+##

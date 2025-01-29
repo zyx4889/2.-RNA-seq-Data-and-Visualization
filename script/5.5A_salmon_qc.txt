@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Get the quant_output_dir from the command line arguments
+quant_output_dir=$1
+
+for quant_dir in ${quant_output_dir}/*_quant; do
+  sample_name=$(basename ${quant_dir} _quant)
+
+  # Calculate the number of transcripts with non-zero TPM values
+  non_zero_tpm=$(awk '$4 != 0 {count++} END {print count}' ${quant_dir}/*quant.sf)
+
+  # Calculate the total number of transcripts
+  total_transcripts=$(wc -l < ${quant_dir}/quant.sf)
+
+  # Calculate the percentage of non-zero TPM values
+  non_zero_tpm_percentage=$(bc -l <<< "scale=2; (${non_zero_tpm} / (${total_transcripts} - 1)) * 100")
+
+  echo "${sample_name}: ${non_zero_tpm_percentage}% of transcripts with non-zero TPM values"
+done
+
+## ./5.5A_salmonqc.sh /projects/p31832/RNAseq/MYCi975/MYCCAP_results/5_salmon_quant

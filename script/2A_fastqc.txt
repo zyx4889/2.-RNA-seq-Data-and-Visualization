@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#SBATCH --account=b1042
+#SBATCH --partition=genomics
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=6
+#SBATCH --time=08:00:00
+#SBATCH --mem=30G
+#SBATCH --job-name=genomics
+#SBATCH --output=/projects/b1042/AbdulkadirLab/Will/22RV1_CHIP/%j.out
+#SBATCH --error=/projects/b1042/AbdulkadirLab/Will/22RV1_CHIP/%j.err
+
+# Get the output folder, raw fastq data directory, and keywords from command line arguments
+OUTPUT=$1
+RAW_FASTQ_DIR=$2
+KEYWORDS=$3
+
+# Change to the directory of raw fastq data
+cd ${RAW_FASTQ_DIR}
+
+# Load the fastqc module
+module load fastqc/0.12.0
+
+# Run fastqc on all samples with the given keywords
+fastqc -o ${OUTPUT} -t 6 ${KEYWORDS}*.fastq 
+
+## sbatch 2A_fastqc.sh <output_folder> <raw_fastq_directory> <keywords>
+
+## sbatch 2A_fastqc.sh /projects/b1042/AbdulkadirLab/Will/macrophage_RNAseq/2_fastqc /projects/b1042/AbdulkadirLab/Will/macrophage_RNAseq/Raw_data ""
