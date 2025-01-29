@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#SBATCH --account=b1042
+#SBATCH --partition=genomics
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=12
+#SBATCH --time=08:00:00
+#SBATCH --mem=20G
+#SBATCH --job-name=genomics
+#SBATCH --output=/projects/p31832/RNAseq/Commands/%j.out
+#SBATCH --error=/projects/p31832/RNAseq/Commands/%j.err
+
+# Get the output folder, raw fastq data directory, and keywords from command line arguments
+OUTPUT=$1
+RAW_FASTQ_DIR=$2
+KEYWORDS=$3
+
+# Change to the directory of raw fastq data
+cd ${RAW_FASTQ_DIR}
+
+# Load the fastqc module
+module load fastqc/0.11.5
+
+# Run fastqc on all samples with the given keywords
+fastqc -o ${OUTPUT} -t 6 ${KEYWORDS}*.fastq.gz
+
+## sbatch 4A_fastqctrim.sh <output_folder> <trimmed_fastqc> <keywords>
+
+## sbatch 4A_fastqctrim.sh /projects/p31832/RNAseq/MYCi975/MYCCAP_results/4_fastqc_trim /projects/p31832/RNAseq/MYCi975/MYCCAP_results/3_trimmed ""
+
+## 

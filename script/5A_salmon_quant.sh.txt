@@ -1,0 +1,37 @@
+#!/bin/bash
+
+#SBATCH --account=b1042
+#SBATCH --partition=genomics
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=6
+#SBATCH --time=08:00:00
+#SBATCH --mem=25G
+#SBATCH --job-name=salmon
+#SBATCH --output=/projects/p31832/RNAseq/Commands/%j.out
+#SBATCH --error=/projects/p31832/RNAseq/Commands/%j.err
+
+# Get transcriptome index, input directory (trimmed reads), output directory, and keyword from command line arguments
+transcriptome_index=$1
+trimmed_dir=$2
+quant_output_dir=$3
+keyword=$4
+
+## Load the required modules
+module load salmon/1.9.0
+module load parallel/20160922
+
+## Generate Salmon commands for each sample and pass them to GNU Parallel
+commands=()
+for f1 in ${trimmed_dir}/*${keyword}*F_paired.fastq.gz; do
+  f2="${f1/F_paired.fastq.gz/R_paired.fastq.gz}"
+  sample_name=$(basename ${f1} _F_paired.fastq.gz)
+  output="${quant_output_dir}/${sample_name}_quant"
+
+  commands+=("salmon quant -i ${transcriptome_index} -l A -1 ${f1} -2 ${f2} --validateMappings --seqBias --useVBOpt -o ${output} --threads 6")
+done
+
+printf "%s\n" "${commands[@]}" | parallel -j 6
+
+##sbatch 5A_quant_salmon.sh <transcriptome_index> <input_directory> <output_directory> <keyword>
+##sbatch 5A_quant_salmon.sh /projects/p31832/RNAseq/Transcriptomics_index/mouse_gencode /projects/b1042/AbdulkadirLab/Will/macrophage_RNAseq/3_trimmed /projects/b1042/AbdulkadirLab/Will/macrophage_RNAseq/5_salmon_quant ""
+##

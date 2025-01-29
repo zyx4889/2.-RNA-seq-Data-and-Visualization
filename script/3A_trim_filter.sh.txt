@@ -1,0 +1,60 @@
+#!/bin/bash
+
+#SBATCH --account=b1042
+#SBATCH --partition=genomics
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=12
+#SBATCH --time=08:00:00
+#SBATCH --mem=60G
+#SBATCH --job-name=genomics
+#SBATCH --output=/projects/p31832/RNAseq/Commands/%j.out
+#SBATCH --error=/projects/p31832/RNAseq/Commands/%j.err
+
+module load trimmomatic/0.39
+
+# Get input and output directories and keywords from command line arguments
+input_dir=$1
+output_dir=$2
+keywords=$3
+
+# Path to Trimmomatic jar file
+trimmomatic_path="/hpc/software/trimmomatic/0.39/trimmomatic-0.39.jar"
+
+# Trimmomatic parameters (change these according to your needs)
+adapter_path="/hpc/software/trimmomatic/0.39/adapters/TruSeq3-PE-2.fa"
+leading=3
+trailing=3
+slidingwindow=4:15
+minlen=25
+
+# Loop through each pair of forward and reverse files
+for forward_file in ${input_dir}/${keywords}*1.fastq.gz; do
+    # Get the base name without the "1.fastq.gz" extension
+    base_name=$(basename ${forward_file} 1.fastq.gz)
+    
+    # Define the reverse file
+    reverse_file=${input_dir}/${base_name}2.fastq.gz
+
+    # Define output file names
+    forward_paired_out=${output_dir}/${base_name}F_paired.fastq.gz
+    forward_unpaired_out=${output_dir}/${base_name}F_unpaired.fastq.gz
+    reverse_paired_out=${output_dir}/${base_name}R_paired.fastq.gz
+    reverse_unpaired_out=${output_dir}/${base_name}R_unpaired.fastq.gz
+
+    # Run Trimmomatic in the background
+    java -jar ${trimmomatic_path} PE -threads 12 -phred33 \
+         ${forward_file} ${reverse_file} \
+         ${forward_paired_out} ${forward_unpaired_out} \
+         ${reverse_paired_out} ${reverse_unpaired_out} \
+         ILLUMINACLIP:${adapter_path}:2:30:10 \
+         LEADING:${leading} TRAILING:${trailing} \
+         SLIDINGWINDOW:${slidingwindow} MINLEN:${minlen} &
+done
+
+# Wait for all background jobs to complete
+wait
+
+echo "All trimming jobs completed."
+
+## sbatch 3A_trim_filter.sh <input_directory> <output_directory> <keywords>
+## sbatch 3A_trim_filter.sh /projects/b1042/AbdulkadirLab/Will/macrophage_RNAseq/Raw_data /projects/b1042/AbdulkadirLab/Will/macrophage_RNAseq/3_trimmed ""

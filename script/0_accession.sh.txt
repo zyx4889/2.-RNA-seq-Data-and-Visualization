@@ -1,0 +1,38 @@
+#!/bin/bash
+
+#SBATCH --account=b1042
+#SBATCH --partition=genomics
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=16
+#SBATCH --time=08:00:00
+#SBATCH --mem=50G
+#SBATCH --job-name=genomics
+#SBATCH --output=/projects/p31832/RNAseq/Commands/%j.out
+#SBATCH --error=/projects/p31832/RNAseq/Commands/%j.err
+# Load the sratoolkit module
+module load sratoolkit/3.0.0
+
+# Define your directories
+SCRATCH_DIR=/projects/b1042/AbdulkadirLab/Will/Glioblastoma_PDX/$USER
+DATA_DIR=/projects/b1042/AbdulkadirLab/Will/Glioblastoma_PDX/rawdata
+
+ACCESSIONS_FILE=/projects/b1042/AbdulkadirLab/Will/Glioblastoma_PDX/accession.txt
+
+# Make sure your directories exist
+mkdir -p $SCRATCH_DIR
+mkdir -p $DATA_DIR
+
+# Define a function to download SRA data
+download_sra() {
+    ACCESSION=$1
+    # Download the SRA data for each accession number
+    fasterq-dump -p -t $SCRATCH_DIR -O $DATA_DIR $ACCESSION
+}
+
+# Export the function and variables so they are available to parallel
+export -f download_sra
+export SCRATCH_DIR
+export DATA_DIR
+
+# Run download_sra on each accession number in parallel
+cat $ACCESSIONS_FILE | parallel download_sra
